@@ -1,0 +1,102 @@
+@keyframes slideIn {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.message-alert {
+    animation: slideIn 0.3s ease-out;
+}
+
+/* Styles pour les cartes de plats */
+.plat-card {
+    transition: all 0.3s ease;
+}
+
+.plat-card:hover {
+    transform: translateY(-5px);
+}
+
+/* Badge de panier */
+.panier-badge {
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+/* Styles pour les états de table */
+.table-libre {
+    border-left: 4px solid #10b981;
+}
+
+.table-attente {
+    border-left: 4px solid #f59e0b;
+}
+
+.table-servie {
+    border-left: 4px solid #3b82f6;
+}
+
+.table-payee {
+    border-left: 4px solid #6b7280;
+}
+
+/* Styles pour le panier */
+.panier-item {
+    transition: background-color 0.2s;
+}
+
+.panier-item:hover {
+    background-color: #f9fafb;
+}
+
+/* Boutons personnalisés */
+.btn-primary {
+    @apply bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+}
+
+.btn-secondary {
+    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors;
+}
+
+.btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+}
+
+.btn-success {
+    @apply bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .plat-card {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Impression */
+@media print {
+    nav, footer, .no-print {
+        display: none !important;
+    }
+    
+    body {
+        font-size: 12pt;
+    }
+    
+    .print-break {
+        page-break-after: always;
+    }
+}

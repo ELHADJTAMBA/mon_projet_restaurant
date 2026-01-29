@@ -197,6 +197,84 @@ class PanierItem(models.Model):
         """Calculer le total de l'article"""
         return self.quantite * self.prix_unitaire
 
+class Paiement(models.Model):
+    """Modèle représentant un paiement"""
+    
+    commande = models.OneToOneField(
+        Commande,
+        on_delete=models.PROTECT,
+        related_name='paiement',
+        verbose_name='Commande'
+    )
+    montant = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        verbose_name='Montant (GNF)'
+    )
+    date_paiement = models.DateTimeField(auto_now_add=True, verbose_name='Date de paiement')
+    
+    class Meta:
+        verbose_name = 'Paiement'
+        verbose_name_plural = 'Paiements'
+        ordering = ['-date_paiement']
+    
+    def __str__(self):
+        return f"Paiement #{self.id} - {self.montant} GNF"
 
+
+class Caisse(models.Model):
+    """Modèle représentant la caisse du restaurant (singleton)"""
+    
+    solde_actuel = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0.00'))],
+        verbose_name='Solde actuel (GNF)'
+    )
+    derniere_mise_a_jour = models.DateTimeField(auto_now=True, verbose_name='Dernière mise à jour')
+    
+    class Meta:
+        verbose_name = 'Caisse'
+        verbose_name_plural = 'Caisses'
+    
+    def __str__(self):
+        return f"Caisse - Solde: {self.solde_actuel} GNF"
+    
+    def save(self, *args, **kwargs):
+        """Empêcher la création de plusieurs caisses"""
+        if not self.pk and Caisse.objects.exists():
+            raise ValueError("Une seule caisse peut exister")
+        return super().save(*args, **kwargs)
+
+
+class Depense(models.Model):
+    """Modèle représentant une dépense du restaurant"""
+    
+    motif = models.CharField(max_length=200, verbose_name='Motif')
+    montant = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        verbose_name='Montant (GNF)'
+    )
+    date = models.DateTimeField(auto_now_add=True, verbose_name='Date')
+    enregistre_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        limit_choices_to={'role__in': ['Rcomptable', 'Radmin']},
+        verbose_name='Enregistré par'
+    )
+    
+    class Meta:
+        verbose_name = 'Dépense'
+        verbose_name_plural = 'Dépenses'
+        ordering = ['-date']
+    
+    def __str__(self):
+        return f"{self.motif} - {self.montant} GNF"
 
 

@@ -1,0 +1,62 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Inscription - RestauPro{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Créer un compte
+            </h2>
+        </div>
+        <form class="mt-8 space-y-6" method="post">
+            {% csrf_token %}
+            <div class="rounded-md shadow-sm space-y-4">
+                <div>
+                    <label for="login" class="block text-sm font-medium text-gray-700">Identifiant (min. 6 caractères)</label>
+                    <input id="login" name="login" type="text" required minlength="6"
+                           class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" 
+                           placeholder="TABLE001">
+                </div>
+                
+                <div>
+                    <label for="role" class="block text-sm font-medium text-gray-700">Rôle</label>
+                    <select id="role" name="role" 
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="Rtable">Table</option>
+                        <option value="Rservent">Serveur</option>
+                        <option value="Rcuisinier">Cuisinier</option>
+                        <option value="Rcomptable">Comptable</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">Mot de passe</label>
+                    <input id="password" name="password" type="password" required 
+                           class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm">
+                </div>
+                
+                <div>
+                    <label for="password_confirm" class="block text-sm font-medium text-gray-700">Confirmer le mot de passe</label>
+                    <input id="password_confirm" name="password_confirm" type="password" required 
+                           class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm">
+                </div>
+            </div>
+
+            <div>
+                <button type="submit" 
+                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    S'inscrire
+                </button>
+            </div>
+            
+            <div class="text-center">
+                <a href="{% url 'accounts:login' %}" class="text-indigo-600 hover:text-indigo-500">
+                    Déjà un compte ? Se connecter
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

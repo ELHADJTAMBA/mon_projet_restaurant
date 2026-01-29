@@ -1,202 +1,149 @@
-import os
-from django.db import models
-from django.conf import settings
-from django.core.validators import MinValueValidator
-from decimal import Decimal
-
-def plat_image_path(instance, filename):
-    """Générer le chemin de stockage des images de plats"""
-    ext = filename.split('.')[-1]
-    filename = f"{instance.nom.lower().replace(' ', '_')}.{ext}"
-    return os.path.join('plats', filename)
+from django.contrib import admin
+from .models import Plat, Commande, CommandeItem, Panier, PanierItem, Paiement, Caisse, Depense
 
 
-class Plat(models.Model):
-    """Modèle représentant un plat du menu"""
+@admin.register(Plat)
+class PlatAdmin(admin.ModelAdmin):
+    """Administration pour les plats"""
     
-    CATEGORIES = [
-        ('ENTREE', 'Entrée'),
-        ('PLAT', 'Plat principal'),
-        ('DESSERT', 'Dessert'),
-        ('BOISSON', 'Boisson'),
-    ]
+    list_display = ('nom', 'categorie', 'prix', 'disponible', 'date_creation')
+    list_filter = ('categorie', 'disponible', 'date_creation')
+    search_fields = ('nom', 'description')
+    list_editable = ('disponible',)
+    ordering = ('categorie', 'nom')
     
-    nom = models.CharField(max_length=100, verbose_name='Nom du plat')
-    description = models.TextField(blank=True, verbose_name='Description')
-    prix = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        validators=[MinValueValidator(Decimal('0.01'))],
-        verbose_name='Prix (GNF)'
-    )
-    categorie = models.CharField(max_length=10, choices=CATEGORIES, verbose_name='Catégorie')
-    disponible = models.BooleanField(default=True, verbose_name='Disponible')
-    image = models.ImageField(upload_to=plat_image_path, blank=True, null=True, verbose_name='Image')
-    date_creation = models.DateTimeField(auto_now_add=True, verbose_name='Date de création')
-    date_modification = models.DateTimeField(auto_now=True, verbose_name='Date de modification')
-    
-    class Meta:
-        verbose_name = 'Plat'
-        verbose_name_plural = 'Plats'
-        ordering = ['categorie', 'nom']
-    
-    def __str__(self):
-        return f"{self.nom} - {self.prix} GNF"
-
-
-class Commande(models.Model):
-    """Modèle représentant une commande"""
-    
-    STATUT_CHOICES = [
-        ('en_attente', 'En attente'),
-        ('en_preparation', 'En préparation'),
-        ('prete', 'Prête à servir'),
-        ('servie', 'Servie'),
-        ('payee', 'Payée'),
-        ('annulee', 'Annulée'),
-    ]
-    
-    table = models.ForeignKey(
-        'tables.TableRestaurant',
-        on_delete=models.PROTECT,
-        related_name='commandes',
-        verbose_name='Table'
-    )
-    date_commande = models.DateTimeField(auto_now_add=True, verbose_name='Date de commande')
-    montant_total = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        validators=[MinValueValidator(Decimal('0'))],
-        verbose_name='Montant total (GNF)'
-    )
-    statut = models.CharField(
-        max_length=20,
-        choices=STATUT_CHOICES,
-        default='en_attente',
-        verbose_name='Statut'
-    )
-    serveur = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='commandes_servies',
-        limit_choices_to={'role__in': ['Rservent', 'Radmin']},
-        verbose_name='Serveur'
+    fieldsets = (
+        ('Informations principales', {
+            'fields': ('nom', 'description', 'categorie', 'prix')
+        }),
+        ('Médias', {
+            'fields': ('image',)
+        }),
+        ('Disponibilité', {
+            'fields': ('disponible',)
+        }),
+        ('Dates', {
+            'fields': ('date_creation', 'date_modification'),
+            'classes': ('collapse',)
+        }),
     )
     
-    class Meta:
-        verbose_name = 'Commande'
-        verbose_name_plural = 'Commandes'
-        ordering = ['-date_commande']
-    
-    def __str__(self):
-        return f"Commande #{self.id} - Table {self.table.numero_table} - {self.montant_total} GNF"
+    readonly_fields = ('date_creation', 'date_modification')
 
 
-class CommandeItem(models.Model):
-    """Modèle représentant un article dans une commande"""
+class CommandeItemInline(admin.TabularInline):
+    """Inline pour les articles de commande"""
+    model = CommandeItem
+    extra = 0
+    readonly_fields = ('plat', 'quantite', 'prix_unitaire', 'total')
+    can_delete = False
     
-    commande = models.ForeignKey(
-        Commande,
-        on_delete=models.CASCADE,
-        related_name='items',
-        verbose_name='Commande'
+    def total(self, obj):
+        return obj.total
+    total.short_description = 'Total (GNF)'
+
+
+@admin.register(Commande)
+class CommandeAdmin(admin.ModelAdmin):
+    """Administration pour les commandes"""
+    
+    list_display = ('id', 'table', 'montant_total', 'statut', 'date_commande', 'serveur')
+    list_filter = ('statut', 'date_commande', 'table')
+    search_fields = ('table__numero_table', 'serveur__login')
+    list_editable = ('statut',)
+    ordering = ('-date_commande',)
+    inlines = [CommandeItemInline]
+    
+    fieldsets = (
+        ('Informations de la commande', {
+            'fields': ('table', 'montant_total', 'statut')
+        }),
+        ('Serveur', {
+            'fields': ('serveur',)
+        }),
+        ('Date', {
+            'fields': ('date_commande',),
+            'classes': ('collapse',)
+        }),
     )
-    plat = models.ForeignKey(
-        Plat,
-        on_delete=models.PROTECT,
-        verbose_name='Plat'
-    )
-    quantite = models.PositiveIntegerField(
-        validators=[MinValueValidator(1)],
-        verbose_name='Quantité'
-    )
-    prix_unitaire = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        validators=[MinValueValidator(Decimal('0.01'))],
-        verbose_name='Prix unitaire (GNF)'
-    )
     
-    class Meta:
-        verbose_name = 'Article de commande'
-        verbose_name_plural = 'Articles de commande'
+    readonly_fields = ('date_commande', 'montant_total')
     
-    def __str__(self):
-        return f"{self.quantite}x {self.plat.nom}"
-    
-    @property
-    def total(self):
-        """Calculer le total de l'article"""
-        return self.quantite * self.prix_unitaire
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('table', 'serveur')
 
 
-class Panier(models.Model):
-    """Modèle représentant un panier temporaire"""
+@admin.register(Paiement)
+class PaiementAdmin(admin.ModelAdmin):
+    """Administration pour les paiements"""
     
-    table = models.ForeignKey(
-        'tables.TableRestaurant',
-        on_delete=models.CASCADE,
-        related_name='paniers',
-        verbose_name='Table'
+    list_display = ('id', 'commande', 'montant', 'date_paiement')
+    list_filter = ('date_paiement',)
+    search_fields = ('commande__id', 'commande__table__numero_table')
+    ordering = ('-date_paiement',)
+    
+    fieldsets = (
+        ('Informations du paiement', {
+            'fields': ('commande', 'montant')
+        }),
+        ('Date', {
+            'fields': ('date_paiement',),
+            'classes': ('collapse',)
+        }),
     )
-    date_creation = models.DateTimeField(auto_now_add=True, verbose_name='Date de création')
-    actif = models.BooleanField(default=True, verbose_name='Actif')
     
-    class Meta:
-        verbose_name = 'Panier'
-        verbose_name_plural = 'Paniers'
-    
-    def __str__(self):
-        return f"Panier - Table {self.table.numero_table}"
-    
-    @property
-    def total(self):
-        """Calculer le montant total du panier"""
-        return sum(item.total for item in self.items.all())
+    readonly_fields = ('date_paiement',)
 
 
-class PanierItem(models.Model):
-    """Modèle représentant un article dans le panier"""
+@admin.register(Caisse)
+class CaisseAdmin(admin.ModelAdmin):
+    """Administration pour la caisse"""
     
-    panier = models.ForeignKey(
-        Panier,
-        on_delete=models.CASCADE,
-        related_name='items',
-        verbose_name='Panier'
+    list_display = ('id', 'solde_actuel', 'derniere_mise_a_jour')
+    
+    fieldsets = (
+        ('Solde', {
+            'fields': ('solde_actuel',)
+        }),
+        ('Dernière mise à jour', {
+            'fields': ('derniere_mise_a_jour',),
+            'classes': ('collapse',)
+        }),
     )
-    plat = models.ForeignKey(
-        Plat,
-        on_delete=models.PROTECT,
-        verbose_name='Plat'
-    )
-    quantite = models.PositiveIntegerField(
-        validators=[MinValueValidator(1)],
-        default=1,
-        verbose_name='Quantité'
-    )
-    prix_unitaire = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        validators=[MinValueValidator(Decimal('0.01'))],
-        verbose_name='Prix unitaire (GNF)'
-    )
-    date_ajout = models.DateTimeField(auto_now_add=True, verbose_name='Date d\'ajout')
     
-    class Meta:
-        verbose_name = 'Article du panier'
-        verbose_name_plural = 'Articles du panier'
-        unique_together = ['panier', 'plat']
+    readonly_fields = ('derniere_mise_a_jour',)
     
-    def __str__(self):
-        return f"{self.quantite}x {self.plat.nom}"
+    def has_add_permission(self, request):
+        # Empêcher la création de plusieurs caisses
+        return not Caisse.objects.exists()
     
-    @property
-    def total(self):
-        """Calculer le total de l'article"""
-        return self.quantite * self.prix_unitaire
+    def has_delete_permission(self, request, obj=None):
+        # Empêcher la suppression de la caisse
+        return False
 
 
-
-
+@admin.register(Depense)
+class DepenseAdmin(admin.ModelAdmin):
+    """Administration pour les dépenses"""
+    
+    list_display = ('motif', 'montant', 'date', 'enregistre_par')
+    list_filter = ('date', 'enregistre_par')
+    search_fields = ('motif',)
+    ordering = ('-date',)
+    
+    fieldsets = (
+        ('Informations de la dépense', {
+            'fields': ('motif', 'montant')
+        }),
+        ('Enregistrement', {
+            'fields': ('enregistre_par', 'date'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('date',)
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('enregistre_par')
