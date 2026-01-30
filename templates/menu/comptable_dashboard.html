@@ -1,0 +1,132 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Tableau de bord Comptable - RestauPro{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <h1 class="text-3xl font-bold text-gray-900">💰 Tableau de bord Comptable</h1>
+
+    <!-- Statistiques du jour -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <p class="text-sm text-gray-600">Solde de la caisse</p>
+            <p class="text-3xl font-bold text-indigo-600">{{ caisse.solde_actuel }} GNF</p>
+        </div>
+        <div class="bg-green-50 rounded-lg shadow-md p-6">
+            <p class="text-sm text-gray-600">Recettes du jour</p>
+            <p class="text-3xl font-bold text-green-600">{{ total_recettes_jour }} GNF</p>
+            <p class="text-xs text-gray-500 mt-1">{{ nombre_paiements_jour }} paiements</p>
+        </div>
+        <div class="bg-red-50 rounded-lg shadow-md p-6">
+            <p class="text-sm text-gray-600">Dépenses du jour</p>
+            <p class="text-3xl font-bold text-red-600">{{ total_depenses_jour }} GNF</p>
+            <p class="text-xs text-gray-500 mt-1">{{ nombre_depenses_jour }} dépenses</p>
+        </div>
+        <div class="bg-blue-50 rounded-lg shadow-md p-6">
+            <p class="text-sm text-gray-600">Bénéfice du jour</p>
+            <p class="text-3xl font-bold {% if benefice_jour >= 0 %}text-blue-600{% else %}text-red-600{% endif %}">
+                {{ benefice_jour }} GNF
+            </p>
+        </div>
+    </div>
+
+    <!-- Navigation rapide -->
+    <div class="grid md:grid-cols-3 gap-6">
+        <a href="{% url 'menu:liste_paiements' %}" class="bg-green-600 hover:bg-green-700 text-white p-6 rounded-lg shadow-md text-center transition">
+            <p class="text-2xl mb-2">💵</p>
+            <p class="text-xl font-bold">Paiements</p>
+        </a>
+        <a href="{% url 'menu:liste_depenses' %}" class="bg-red-600 hover:bg-red-700 text-white p-6 rounded-lg shadow-md text-center transition">
+            <p class="text-2xl mb-2">📤</p>
+            <p class="text-xl font-bold">Dépenses</p>
+        </a>
+        <a href="{% url 'menu:rapport_financier' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white p-6 rounded-lg shadow-md text-center transition">
+            <p class="text-2xl mb-2">📊</p>
+            <p class="text-xl font-bold">Rapport</p>
+        </a>
+    </div>
+
+    <!-- Statistiques des commandes -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">📋 État des commandes</h2>
+        <div class="grid grid-cols-3 gap-4">
+            <div class="text-center">
+                <p class="text-3xl font-bold text-yellow-600">{{ commandes_stats.en_attente }}</p>
+                <p class="text-gray-600">En attente</p>
+            </div>
+            <div class="text-center">
+                <p class="text-3xl font-bold text-green-600">{{ commandes_stats.servies }}</p>
+                <p class="text-gray-600">Servies</p>
+            </div>
+            <div class="text-center">
+                <p class="text-3xl font-bold text-gray-600">{{ commandes_stats.payees }}</p>
+                <p class="text-gray-600">Payées</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dernières transactions -->
+    <div class="grid md:grid-cols-2 gap-6">
+        <!-- Dernières recettes -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-green-50">
+                <h2 class="text-xl font-bold text-gray-900">💵 Dernières recettes</h2>
+            </div>
+            {% if dernieres_recettes %}
+                <div class="divide-y divide-gray-200">
+                    {% for paiement in dernieres_recettes %}
+                        <div class="p-4">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="font-bold text-gray-900">Commande #{{ paiement.commande.id }}</p>
+                                    <p class="text-sm text-gray-600">Table {{ paiement.commande.table.numero_table }}</p>
+                                    <p class="text-xs text-gray-500">{{ paiement.date_paiement|date:"d/m/Y H:i" }}</p>
+                                </div>
+                                <p class="text-lg font-bold text-green-600">{{ paiement.montant }} GNF</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="p-12 text-center">
+                    <p class="text-gray-500">Aucune recette aujourd'hui</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Dernières dépenses -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-red-50">
+                <h2 class="text-xl font-bold text-gray-900">📤 Dernières dépenses</h2>
+            </div>
+            {% if dernieres_depenses %}
+                <div class="divide-y divide-gray-200">
+                    {% for depense in dernieres_depenses %}
+                        <div class="p-4">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="font-bold text-gray-900">{{ depense.motif }}</p>
+                                    <p class="text-sm text-gray-600">Par {{ depense.enregistre_par.login }}</p>
+                                    <p class="text-xs text-gray-500">{{ depense.date|date:"d/m/Y H:i" }}</p>
+                                </div>
+                                <p class="text-lg font-bold text-red-600">{{ depense.montant }} GNF</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="p-12 text-center">
+                    <p class="text-gray-500">Aucune dépense aujourd'hui</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Bouton d'action rapide -->
+    <div class="text-center">
+        <a href="{% url 'menu:ajouter_depense' %}" class="inline-block bg-orange-600 hover:bg-orange-700 text-white px-8 py-3 rounded-lg font-bold text-lg transition">
+            ➕ Enregistrer une dépense
+        </a>
+    </div>
+</div>
+{% endblock %}

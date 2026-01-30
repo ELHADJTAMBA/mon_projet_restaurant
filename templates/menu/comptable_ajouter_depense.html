@@ -1,0 +1,57 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Ajouter une dépense - RestauPro{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-900">➕ Ajouter une Dépense</h1>
+        <a href="{% url 'menu:liste_depenses' %}" class="text-indigo-600 hover:text-indigo-700 font-medium">
+            ← Retour à la liste
+        </a>
+    </div>
+
+    <!-- Solde actuel -->
+    <div class="bg-indigo-50 rounded-lg shadow-md p-6">
+        <p class="text-sm text-gray-600">Solde actuel de la caisse</p>
+        <p class="text-3xl font-bold text-indigo-600">{{ solde_actuel }} GNF</p>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            <div>
+                <label for="motif" class="block text-sm font-medium text-gray-700 mb-1">Motif de la dépense *</label>
+                <input type="text" id="motif" name="motif" required 
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                       placeholder="Ex: Achat de légumes">
+            </div>
+            
+            <div>
+                <label for="montant" class="block text-sm font-medium text-gray-700 mb-1">Montant (GNF) *</label>
+                <input type="number" id="montant" name="montant" required min="1" step="0.01"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                       placeholder="50000">
+                <p class="text-xs text-gray-500 mt-1">Le montant doit être inférieur ou égal au solde de la caisse</p>
+            </div>
+            
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                <p class="text-sm text-yellow-700">
+                    <strong>⚠️ Attention :</strong> Cette opération déduira le montant du solde de la caisse.
+                </p>
+            </div>
+            
+            <div class="flex space-x-3">
+                <button type="submit" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-medium transition">
+                    ✅ Enregistrer la dépense
+                </button>
+                <a href="{% url 'menu:liste_depenses' %}" 
+                   class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-lg font-medium text-center transition">
+                    Annuler
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

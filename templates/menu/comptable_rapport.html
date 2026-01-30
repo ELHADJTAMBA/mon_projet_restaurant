@@ -1,0 +1,170 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Rapport Financier - RestauPro{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-900">📊 Rapport Financier</h1>
+        <a href="{% url 'menu:tableau_bord_comptable' %}" class="text-indigo-600 hover:text-indigo-700 font-medium">
+            ← Retour au tableau de bord
+        </a>
+    </div>
+
+    <!-- Filtres de date -->
+    <form method="get" class="bg-white rounded-lg shadow-md p-6">
+        <div class="grid md:grid-cols-3 gap-4">
+            <div>
+                <label for="date_debut" class="block text-sm font-medium text-gray-700 mb-1">Date de début</label>
+                <input type="date" id="date_debut" name="date_debut" value="{{ date_debut }}" 
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+            </div>
+            <div>
+                <label for="date_fin" class="block text-sm font-medium text-gray-700 mb-1">Date de fin</label>
+                <input type="date" id="date_fin" name="date_fin" value="{{ date_fin }}" 
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium">
+                    Générer le rapport
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <!-- BOUTONS D'EXPORT - TRÈS IMPORTANT -->
+    <div class="flex space-x-4">
+        <a href="{% url 'menu:export_rapport_excel' %}?date_debut={{ date_debut }}&date_fin={{ date_fin }}" 
+           class="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium text-center transition">
+            📥 Exporter en Excel (.xlsx)
+        </a>
+        <a href="{% url 'menu:export_rapport_pdf' %}?date_debut={{ date_debut }}&date_fin={{ date_fin }}" 
+           class="flex-1 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium text-center transition">
+            📄 Exporter en PDF
+        </a>
+    </div>
+
+    <!-- Résumé financier -->
+    <div class="grid md:grid-cols-3 gap-6">
+        <div class="bg-green-50 rounded-lg shadow-md p-6">
+            <p class="text-sm text-gray-600 mb-2">Total Recettes</p>
+            <p class="text-3xl font-bold text-green-600">{{ total_recettes }} GNF</p>
+            <p class="text-xs text-gray-500 mt-2">{{ nombre_paiements }} paiements</p>
+        </div>
+        <div class="bg-red-50 rounded-lg shadow-md p-6">
+            <p class="text-sm text-gray-600 mb-2">Total Dépenses</p>
+            <p class="text-3xl font-bold text-red-600">{{ total_depenses }} GNF</p>
+            <p class="text-xs text-gray-500 mt-2">{{ nombre_depenses }} dépenses</p>
+        </div>
+        <div class="bg-blue-50 rounded-lg shadow-md p-6">
+            <p class="text-sm text-gray-600 mb-2">Bénéfice</p>
+            <p class="text-3xl font-bold {% if benefice >= 0 %}text-blue-600{% else %}text-red-600{% endif %}">
+                {{ benefice }} GNF
+            </p>
+            <p class="text-xs text-gray-500 mt-2">
+                {% if benefice >= 0 %}
+                    Résultat positif ✅
+                {% else %}
+                    Résultat négatif ⚠️
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Tableau des paiements -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="p-6 border-b border-gray-200 bg-green-50">
+            <h2 class="text-xl font-bold text-gray-900">💵 Paiements</h2>
+        </div>
+        {% if paiements %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Commande</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Table</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for paiement in paiements %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ paiement.date_paiement|date:"d/m/Y H:i" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    #{{ paiement.commande.id }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ paiement.commande.table.numero_table }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600 text-right">
+                                    {{ paiement.montant }} GNF
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="p-12 text-center">
+                <p class="text-gray-500">Aucun paiement sur cette période</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Tableau des dépenses -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="p-6 border-b border-gray-200 bg-red-50">
+            <h2 class="text-xl font-bold text-gray-900">📤 Dépenses</h2>
+        </div>
+        {% if depenses %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Motif</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Enregistré par</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for depense in depenses %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ depense.date|date:"d/m/Y H:i" }}
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900">
+                                    {{ depense.motif }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ depense.enregistre_par.login }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-red-600 text-right">
+                                    {{ depense.montant }} GNF
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="p-12 text-center">
+                <p class="text-gray-500">Aucune dépense sur cette période</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Informations supplémentaires -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">ℹ️ Informations</h2>
+        <div class="space-y-2 text-sm text-gray-600">
+            <p>• <strong>Solde actuel de la caisse :</strong> {{ solde_caisse }} GNF</p>
+            <p>• <strong>Période :</strong> Du {{ date_debut }} au {{ date_fin }}</p>
+            <p>• <strong>Nombre de transactions :</strong> {{ nombre_paiements }} paiements, {{ nombre_depenses }} dépenses</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

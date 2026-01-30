@@ -5,14 +5,25 @@ from django.http import JsonResponse
 from django.db import transaction
 from django.db.models import Q, Sum, Count
 from decimal import Decimal
-
-from .models import Plat, Panier, PanierItem, Commande, CommandeItem, Paiement
-from tables.models import TableRestaurant
-from accounts.decorators import table_only, serveur_only
-from accounts.decorators import cuisinier_only
 from django.utils import timezone
 from datetime import datetime, timedelta
-from accounts.decorators import comptable_only
+
+from .models import Plat, Panier, PanierItem, Commande, CommandeItem, Paiement, Caisse, Depense
+from tables.models import TableRestaurant
+from accounts.decorators import table_only, serveur_only, cuisinier_only, comptable_only
+from django.http import HttpResponse
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from io import BytesIO
+# from accounts.decorators import cuisinier_only
+# from django.utils import timezone
+# from datetime import datetime, timedelta
+# from accounts.decorators import comptable_only
 
 @login_required
 def menu_list(request):
@@ -730,3 +741,243 @@ def rapport_financier(request):
     }
     
     return render(request, 'menu/comptable_rapport.html', context)
+
+
+
+@login_required
+@comptable_only
+def export_rapport_excel(request):
+    """Exporter le rapport financier en Excel"""
+    # Récupérer les paramètres de date
+    date_debut = request.GET.get('date_debut', timezone.now().date().replace(day=1).strftime('%Y-%m-%d'))
+    date_fin = request.GET.get('date_fin', timezone.now().date().strftime('%Y-%m-%d'))
+    
+    try:
+        date_debut_obj = datetime.strptime(date_debut, '%Y-%m-%d')
+        date_fin_obj = datetime.strptime(date_fin, '%Y-%m-%d')
+        date_fin_obj = timezone.make_aware(datetime.combine(date_fin_obj, datetime.max.time()))
+        date_debut_obj = timezone.make_aware(datetime.combine(date_debut_obj, datetime.min.time()))
+    except ValueError:
+        messages.error(request, "Format de date invalide.")
+        return redirect('menu:tableau_bord_comptable')
+    
+    # Récupérer les données
+    paiements = Paiement.objects.filter(date_paiement__range=(date_debut_obj, date_fin_obj))
+    depenses = Depense.objects.filter(date__range=(date_debut_obj, date_fin_obj))
+    
+    total_recettes = paiements.aggregate(total=Sum('montant'))['total'] or Decimal('0.00')
+    total_depenses = depenses.aggregate(total=Sum('montant'))['total'] or Decimal('0.00')
+    benefice = total_recettes - total_depenses
+    
+    # Créer le classeur Excel
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Rapport Financier"
+    
+    # Style d'en-tête
+    header_fill = PatternFill(start_color="4F46E5", end_color="4F46E5", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=12)
+    
+    # Titre
+    ws['A1'] = 'RAPPORT FINANCIER - RESTAURO'
+    ws['A1'].font = Font(bold=True, size=16, color="4F46E5")
+    ws.merge_cells('A1:D1')
+    
+    # Période
+    ws['A2'] = f'Période : {date_debut} au {date_fin}'
+    ws['A2'].font = Font(size=11)
+    ws.merge_cells('A2:D2')
+    
+    # Résumé
+    ws['A4'] = 'RÉSUMÉ'
+    ws['A4'].font = header_font
+    ws['A4'].fill = header_fill
+    ws.merge_cells('A4:B4')
+    
+    ws['A5'] = 'Total Recettes'
+    ws['B5'] = f'{total_recettes} GNF'
+    ws['A6'] = 'Total Dépenses'
+    ws['B6'] = f'{total_depenses} GNF'
+    ws['A7'] = 'Bénéfice'
+    ws['B7'] = f'{benefice} GNF'
+    ws['B7'].font = Font(bold=True, color="10B981" if benefice >= 0 else "EF4444")
+    
+    # Liste des paiements
+    ws['A9'] = 'PAIEMENTS'
+    ws['A9'].font = header_font
+    ws['A9'].fill = header_fill
+    ws.merge_cells('A9:D9')
+    
+    ws['A10'] = 'Date'
+    ws['B10'] = 'Commande #'
+    ws['C10'] = 'Table'
+    ws['D10'] = 'Montant (GNF)'
+    for cell in ['A10', 'B10', 'C10', 'D10']:
+        ws[cell].font = header_font
+        ws[cell].fill = header_fill
+    
+    row = 11
+    for paiement in paiements:
+        ws[f'A{row}'] = paiement.date_paiement.strftime('%d/%m/%Y %H:%M')
+        ws[f'B{row}'] = paiement.commande.id
+        ws[f'C{row}'] = paiement.commande.table.numero_table
+        ws[f'D{row}'] = float(paiement.montant)
+        row += 1
+    
+    # Liste des dépenses
+    row += 2
+    ws[f'A{row}'] = 'DÉPENSES'
+    ws[f'A{row}'].font = header_font
+    ws[f'A{row}'].fill = header_fill
+    ws.merge_cells(f'A{row}:D{row}')
+    
+    row += 1
+    ws[f'A{row}'] = 'Date'
+    ws[f'B{row}'] = 'Motif'
+    ws[f'C{row}'] = 'Enregistré par'
+    ws[f'D{row}'] = 'Montant (GNF)'
+    for cell in [f'A{row}', f'B{row}', f'C{row}', f'D{row}']:
+        ws[cell].font = header_font
+        ws[cell].fill = header_fill
+    
+    row += 1
+    for depense in depenses:
+        ws[f'A{row}'] = depense.date.strftime('%d/%m/%Y %H:%M')
+        ws[f'B{row}'] = depense.motif
+        ws[f'C{row}'] = depense.enregistre_par.login if depense.enregistre_par else 'N/A'
+        ws[f'D{row}'] = float(depense.montant)
+        row += 1
+    
+    # Ajuster la largeur des colonnes
+    ws.column_dimensions['A'].width = 20
+    ws.column_dimensions['B'].width = 30
+    ws.column_dimensions['C'].width = 20
+    ws.column_dimensions['D'].width = 20
+    
+    # Préparer la réponse
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename=rapport_financier_{date_debut}_{date_fin}.xlsx'
+    wb.save(response)
+    
+    return response
+
+
+@login_required
+@comptable_only
+def export_rapport_pdf(request):
+    """Exporter le rapport financier en PDF"""
+    # Récupérer les paramètres de date
+    date_debut = request.GET.get('date_debut', timezone.now().date().replace(day=1).strftime('%Y-%m-%d'))
+    date_fin = request.GET.get('date_fin', timezone.now().date().strftime('%Y-%m-%d'))
+    
+    try:
+        date_debut_obj = datetime.strptime(date_debut, '%Y-%m-%d')
+        date_fin_obj = datetime.strptime(date_fin, '%Y-%m-%d')
+        date_fin_obj = timezone.make_aware(datetime.combine(date_fin_obj, datetime.max.time()))
+        date_debut_obj = timezone.make_aware(datetime.combine(date_debut_obj, datetime.min.time()))
+    except ValueError:
+        messages.error(request, "Format de date invalide.")
+        return redirect('menu:tableau_bord_comptable')
+    
+    # Récupérer les données
+    paiements = Paiement.objects.filter(date_paiement__range=(date_debut_obj, date_fin_obj))
+    depenses = Depense.objects.filter(date__range=(date_debut_obj, date_fin_obj))
+    
+    total_recettes = paiements.aggregate(total=Sum('montant'))['total'] or Decimal('0.00')
+    total_depenses = depenses.aggregate(total=Sum('montant'))['total'] or Decimal('0.00')
+    benefice = total_recettes - total_depenses
+    
+    # Créer le PDF
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Titre
+    title_style = styles['Title']
+    elements.append(Paragraph('RAPPORT FINANCIER - RESTAURO', title_style))
+    elements.append(Spacer(1, 0.2*inch))
+    
+    # Période
+    elements.append(Paragraph(f'Période : {date_debut} au {date_fin}', styles['Normal']))
+    elements.append(Spacer(1, 0.3*inch))
+    
+    # Résumé
+    resume_data = [
+        ['RÉSUMÉ', ''],
+        ['Total Recettes', f'{total_recettes} GNF'],
+        ['Total Dépenses', f'{total_depenses} GNF'],
+        ['Bénéfice', f'{benefice} GNF'],
+    ]
+    
+    resume_table = Table(resume_data, colWidths=[3*inch, 3*inch])
+    resume_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (1, 0), colors.HexColor('#4F46E5')),
+        ('TEXTCOLOR', (0, 0), (1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 14),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    elements.append(resume_table)
+    elements.append(Spacer(1, 0.3*inch))
+    
+    # Paiements
+    elements.append(Paragraph('PAIEMENTS', styles['Heading2']))
+    paiements_data = [['Date', 'Commande', 'Table', 'Montant']]
+    for p in paiements:
+        paiements_data.append([
+            p.date_paiement.strftime('%d/%m/%Y'),
+            f'#{p.commande.id}',
+            p.commande.table.numero_table,
+            f'{p.montant} GNF'
+        ])
+    
+    paiements_table = Table(paiements_data, colWidths=[1.5*inch, 1.5*inch, 1.5*inch, 2*inch])
+    paiements_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    elements.append(paiements_table)
+    elements.append(Spacer(1, 0.3*inch))
+    
+    # Dépenses
+    elements.append(Paragraph('DÉPENSES', styles['Heading2']))
+    depenses_data = [['Date', 'Motif', 'Enregistré par', 'Montant']]
+    for d in depenses:
+        depenses_data.append([
+            d.date.strftime('%d/%m/%Y'),
+            d.motif[:30],
+            d.enregistre_par.login if d.enregistre_par else 'N/A',
+            f'{d.montant} GNF'
+        ])
+    
+    depenses_table = Table(depenses_data, colWidths=[1.5*inch, 2*inch, 1.5*inch, 1.5*inch])
+    depenses_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    elements.append(depenses_table)
+    
+    # Générer le PDF
+    doc.build(elements)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename=rapport_financier_{date_debut}_{date_fin}.pdf'
+    
+    return response

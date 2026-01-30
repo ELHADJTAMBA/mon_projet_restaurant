@@ -1,0 +1,80 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Gestion des Plats - RestauPro{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-900">🍽️ Gestion des Plats</h1>
+        <div class="space-x-3">
+            <a href="{% url 'menu:tableau_bord_cuisinier' %}" class="text-indigo-600 hover:text-indigo-700 font-medium">
+                ← Retour au tableau de bord
+            </a>
+            <a href="{% url 'menu:ajouter_plat' %}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium">
+                ➕ Ajouter un plat
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtres de catégories -->
+    <div class="flex space-x-4 overflow-x-auto pb-2">
+        <a href="{% url 'menu:gestion_plats_cuisinier' %}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 whitespace-nowrap">
+            Tous
+        </a>
+        {% for code, nom in categories %}
+            <a href="{% url 'menu:gestion_plats_cuisinier' %}?categorie={{ code }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 whitespace-nowrap">
+                {{ nom }}
+            </a>
+        {% endfor %}
+    </div>
+
+    <!-- Liste des plats par catégorie -->
+    {% for categorie, plats in plats_par_categorie.items %}
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">{{ categorie }}</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for plat in plats %}
+                    <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition">
+                        {% if plat.image %}
+                            <img src="{{ plat.image.url }}" alt="{{ plat.nom }}" class="w-full h-48 object-cover">
+                        {% else %}
+                            <div class="w-full h-48 bg-gray-200 flex items-center justify-center">
+                                <span class="text-6xl">🍽️</span>
+                            </div>
+                        {% endif %}
+                        <div class="p-4">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="text-xl font-bold text-gray-900">{{ plat.nom }}</h3>
+                                <span class="px-2 py-1 rounded-lg text-sm font-medium {% if plat.disponible %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                    {% if plat.disponible %}Disponible{% else %}Indisponible{% endif %}
+                                </span>
+                            </div>
+                            <p class="text-gray-600 mb-4">{{ plat.description|truncatewords:15 }}</p>
+                            <p class="text-2xl font-bold text-indigo-600 mb-4">{{ plat.prix }} GNF</p>
+                            
+                            <div class="grid grid-cols-2 gap-2">
+                                <a href="{% url 'menu:modifier_plat' plat.id %}" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-medium text-center text-sm transition">
+                                    ✏️ Modifier
+                                </a>
+                                <form method="post" action="{% url 'menu:changer_disponibilite_plat' plat.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="w-full {% if plat.disponible %}bg-orange-600 hover:bg-orange-700{% else %}bg-green-600 hover:bg-green-700{% endif %} text-white px-3 py-2 rounded-lg font-medium text-sm transition">
+                                        {% if plat.disponible %}🚫 Désactiver{% else %}✅ Activer{% endif %}
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% empty %}
+        <div class="text-center py-12">
+            <p class="text-gray-500 text-lg">Aucun plat disponible.</p>
+            <a href="{% url 'menu:ajouter_plat' %}" class="inline-block mt-4 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium">
+                Ajouter le premier plat
+            </a>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

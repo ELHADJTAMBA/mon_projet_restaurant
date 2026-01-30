@@ -32,8 +32,4 @@ urlpatterns = [
     path('comptable/depenses/', views.liste_depenses, name='liste_depenses'),
     path('comptable/depenses/ajouter/', views.ajouter_depense, name='ajouter_depense'),
     path('comptable/rapport/', views.rapport_financier, name='rapport_financier'),
-    
-    # ==================== ROUTES BONUS - EXPORTS ====================
-    path('comptable/export/excel/', views.export_rapport_excel, name='export_rapport_excel'),
-    path('comptable/export/pdf/', views.export_rapport_pdf, name='export_rapport_pdf'),
 ]

@@ -1,0 +1,83 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Paiements - RestauPro{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-900">💵 Liste des Paiements</h1>
+        <a href="{% url 'menu:tableau_bord_comptable' %}" class="text-indigo-600 hover:text-indigo-700 font-medium">
+            ← Retour au tableau de bord
+        </a>
+    </div>
+
+    <!-- Filtres -->
+    <form method="get" class="bg-white rounded-lg shadow-md p-6">
+        <div class="grid md:grid-cols-3 gap-4">
+            <div>
+                <label for="date_debut" class="block text-sm font-medium text-gray-700 mb-1">Date de début</label>
+                <input type="date" id="date_debut" name="date_debut" value="{{ date_debut }}" 
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+            </div>
+            <div>
+                <label for="date_fin" class="block text-sm font-medium text-gray-700 mb-1">Date de fin</label>
+                <input type="date" id="date_fin" name="date_fin" value="{{ date_fin }}" 
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium">
+                    Filtrer
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Total -->
+    <div class="bg-green-50 rounded-lg shadow-md p-6">
+        <p class="text-sm text-gray-600">Total des paiements</p>
+        <p class="text-4xl font-bold text-green-600">{{ total_paiements }} GNF</p>
+    </div>
+
+    <!-- Tableau des paiements -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        {% if paiements %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commande</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Table</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Montant</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for paiement in paiements %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ paiement.date_paiement|date:"d/m/Y H:i" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <a href="{% url 'menu:detail_commande' paiement.commande.id %}" class="text-indigo-600 hover:text-indigo-800 font-medium">
+                                        #{{ paiement.commande.id }}
+                                    </a>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ paiement.commande.table.numero_table }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600 text-right">
+                                    {{ paiement.montant }} GNF
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="p-12 text-center">
+                <p class="text-gray-500">Aucun paiement trouvé</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
