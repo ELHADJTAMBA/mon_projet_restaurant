@@ -7,6 +7,7 @@ from django.views.generic import RedirectView
 urlpatterns = [
     # Admin
     path('admin/', admin.site.urls),
+    path('admin-panel/', include('admin_panel.urls')),
     
     # Redirection de la racine vers le menu
     path('', RedirectView.as_view(url='/menu/', permanent=False), name='home'),

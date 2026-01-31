@@ -1,0 +1,357 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Espace Serveur - RestauPro{% endblock %}
+
+{% block extra_css %}
+<style>
+.serveur-header {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+.card-hover {
+    transition: all 0.3s ease;
+}
+.card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+.table-card {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+.table-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+.table-card:hover::before {
+    left: 100%;
+}
+.status-indicator {
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+.quick-action {
+    transition: all 0.2s ease;
+}
+.quick-action:hover {
+    transform: scale(1.05);
+}
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+.notification-badge {
+    animation: bounce 1s infinite;
+}
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-5px); }
+    60% { transform: translateY(-2px); }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- En-tête serveur -->
+    <div class="serveur-header text-white p-6 rounded-b-3xl shadow-2xl">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-4xl font-bold mb-2">👨‍🍳 Espace Serveur</h1>
+                    <p class="text-xl opacity-90">Gestion des tables et commandes</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-lg opacity-90">Connecté en tant que</p>
+                    <p class="text-2xl font-bold">{{ user.login }}</p>
+                    <p class="text-sm opacity-80">Serveur</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto p-6 space-y-6">
+        <!-- Statistiques en temps réel -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div class="stats-card rounded-xl shadow-lg p-6 text-white">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-3xl">🪑</span>
+                    <span class="text-2xl font-bold">{{ stats.total }}</span>
+                </div>
+                <p class="text-white opacity-90">Total Tables</p>
+            </div>
+            <div class="bg-green-500 text-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-3xl">✅</span>
+                    <span class="text-2xl font-bold">{{ stats.libres }}</span>
+                </div>
+                <p class="text-white opacity-90">Libres</p>
+            </div>
+            <div class="bg-yellow-500 text-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-3xl status-indicator">⏳</span>
+                    <span class="text-2xl font-bold">{{ stats.attente }}</span>
+                </div>
+                <p class="text-white opacity-90">En attente</p>
+            </div>
+            <div class="bg-blue-500 text-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-3xl">🍽️</span>
+                    <span class="text-2xl font-bold">{{ stats.servies }}</span>
+                </div>
+                <p class="text-white opacity-90">Servies</p>
+            </div>
+            <div class="bg-purple-500 text-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-3xl">💰</span>
+                    <span class="text-2xl font-bold">{{ stats.payees }}</span>
+                </div>
+                <p class="text-white opacity-90">Payées</p>
+            </div>
+        </div>
+
+        <!-- Actions rapides -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-white rounded-xl shadow-lg p-6 card-hover quick-action">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-indigo-100 p-3 rounded-lg">
+                        <span class="text-2xl">🔄</span>
+                    </div>
+                    {% if stats.attente > 0 %}
+                        <span class="notification-badge bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                            {{ stats.attente }}
+                        </span>
+                    {% endif %}
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Actualiser</h3>
+                <p class="text-gray-600 mb-4">Mettre à jour l'état des tables</p>
+                <button onclick="location.reload()" class="block w-full bg-indigo-600 hover:bg-indigo-700 text-white text-center py-2 rounded-lg font-medium transition">
+                    🔄 Actualiser
+                </button>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 card-hover quick-action">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-green-100 p-3 rounded-lg">
+                        <span class="text-2xl">📊</span>
+                    </div>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Rapports</h3>
+                <p class="text-gray-600 mb-4">Voir les statistiques</p>
+                <button class="block w-full bg-green-600 hover:bg-green-700 text-white text-center py-2 rounded-lg font-medium transition">
+                    📈 Voir les stats
+                </button>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 card-hover quick-action">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-purple-100 p-3 rounded-lg">
+                        <span class="text-2xl">🔔</span>
+                    </div>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Notifications</h3>
+                <p class="text-gray-600 mb-4">Alertes du restaurant</p>
+                <button class="block w-full bg-purple-600 hover:bg-purple-700 text-white text-center py-2 rounded-lg font-medium transition">
+                    🔔 Voir les alertes
+                </button>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 card-hover quick-action">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-orange-100 p-3 rounded-lg">
+                        <span class="text-2xl">👤</span>
+                    </div>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Mon Profil</h3>
+                <p class="text-gray-600 mb-4">Mes informations</p>
+                <button class="block w-full bg-orange-600 hover:bg-orange-700 text-white text-center py-2 rounded-lg font-medium transition">
+                    👤 Mon compte
+                </button>
+            </div>
+        </div>
+
+        <!-- Liste des tables -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">🪑 Gestion des Tables</h2>
+                <div class="flex items-center space-x-4">
+                    <input type="text" placeholder="Rechercher une table..." 
+                           class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                           id="tableSearch">
+                    <select class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" id="statusFilter">
+                        <option value="">Tous les statuts</option>
+                        <option value="libre">Libres</option>
+                        <option value="attente">En attente</option>
+                        <option value="servie">Servies</option>
+                        <option value="payee">Payées</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="tablesContainer">
+                {% for table in tables %}
+                    <div class="table-card bg-white border-2 rounded-xl p-4 hover:shadow-xl
+                        {% if table.etat == 'libre' %}border-green-200 hover:border-green-400
+                        {% elif table.etat == 'attente' %}border-yellow-200 hover:border-yellow-400
+                        {% elif table.etat == 'servie' %}border-blue-200 hover:border-blue-400
+                        {% else %}border-gray-200 hover:border-gray-400{% endif %}"
+                        data-status="{{ table.etat }}" data-number="{{ table.numero_table }}">
+                        
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900">Table {{ table.numero_table }}</h3>
+                                <p class="text-sm text-gray-600">{{ table.nombre_places }} places</p>
+                                {% if table.utilisateur %}
+                                    <p class="text-xs text-gray-500">Client: {{ table.utilisateur.login }}</p>
+                                {% endif %}
+                            </div>
+                            <span class="px-3 py-1 rounded-full text-xs font-bold status-indicator
+                                {% if table.etat == 'libre' %}bg-green-100 text-green-800
+                                {% elif table.etat == 'attente' %}bg-yellow-100 text-yellow-800
+                                {% elif table.etat == 'servie' %}bg-blue-100 text-blue-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ table.get_etat_display }}
+                            </span>
+                        </div>
+
+                        <div class="space-y-2">
+                            {% if table.etat == 'attente' %}
+                                <form method="post" action="{% url 'tables:changer_etat_table' table.id %}" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="marquer_servie">
+                                    <button type="submit" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition">
+                                        🍽️ Marquer servie
+                                    </button>
+                                </form>
+                            {% elif table.etat == 'servie' %}
+                                <form method="post" action="{% url 'tables:changer_etat_table' table.id %}" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="valider_paiement">
+                                    <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition">
+                                        💰 Valider paiement
+                                    </button>
+                                </form>
+                            {% endif %}
+                            
+                            <a href="{% url 'tables:detail_table' table.id %}" 
+                               class="block w-full bg-indigo-600 hover:bg-indigo-700 text-white text-center px-3 py-2 rounded-lg text-sm font-medium transition">
+                                👁️ Voir détails
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Tableau de bord des commandes récentes -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">🍽️ Commandes en attente</h3>
+                <div class="space-y-3" id="recentOrders">
+                    {% for table in tables %}
+                        {% if table.etat == 'attente' %}
+                            <div class="border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-lg">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <p class="font-bold text-gray-900">Table {{ table.numero_table }}</p>
+                                        <p class="text-sm text-gray-600">En attente de service</p>
+                                    </div>
+                                    <a href="{% url 'tables:detail_table' table.id %}" 
+                                       class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg text-sm">
+                                        Voir
+                                    </a>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                    {% if tables|selectattr:'etat'|filter:'attente'|list|length == 0 %}
+                        <p class="text-gray-500 text-center py-4">Aucune commande en attente</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">💰 Paiements à valider</h3>
+                <div class="space-y-3" id="pendingPayments">
+                    {% for table in tables %}
+                        {% if table.etat == 'servie' %}
+                            <div class="border-l-4 border-blue-500 bg-blue-50 p-4 rounded-lg">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <p class="font-bold text-gray-900">Table {{ table.numero_table }}</p>
+                                        <p class="text-sm text-gray-600">Prête pour paiement</p>
+                                    </div>
+                                    <form method="post" action="{% url 'tables:changer_etat_table' table.id %}" class="inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="valider_paiement">
+                                        <button type="submit" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm">
+                                            Payer
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                    {% if tables|selectattr:'etat'|filter:'servie'|list|length == 0 %}
+                        <p class="text-gray-500 text-center py-4">Aucun paiement en attente</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Filtrage des tables
+function filterTables() {
+    const searchTerm = document.getElementById('tableSearch').value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter').value;
+    const tables = document.querySelectorAll('.table-card');
+    
+    tables.forEach(table => {
+        const number = table.dataset.number.toLowerCase();
+        const status = table.dataset.status;
+        
+        const matchesSearch = number.includes(searchTerm);
+        const matchesStatus = !statusFilter || status === statusFilter;
+        
+        if (matchesSearch && matchesStatus) {
+            table.style.display = 'block';
+        } else {
+            table.style.display = 'none';
+        }
+    });
+}
+
+document.getElementById('tableSearch').addEventListener('input', filterTables);
+document.getElementById('statusFilter').addEventListener('change', filterTables);
+
+// Auto-rafraîchissement toutes les 30 secondes
+setInterval(() => {
+    console.log('Actualisation automatique...');
+    // location.reload();
+}, 30000);
+
+// Notifications sonores pour nouvelles commandes
+function checkNewOrders() {
+    const waitingTables = document.querySelectorAll('[data-status="attente"]').length;
+    if (waitingTables > 0) {
+        // Jouer une notification sonore si disponible
+        console.log(`${waitingTables} table(s) en attente`);
+    }
+}
+
+setInterval(checkNewOrders, 10000);
+</script>
+{% endblock %}

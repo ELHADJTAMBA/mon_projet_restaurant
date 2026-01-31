@@ -1,11 +1,66 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.contrib.auth import login
+from django.contrib.auth import login, authenticate
 from .models import User
 
 
+def custom_login(request):
+    """Vue de connexion personnalisée pour gérer le champ 'login'"""
+    if request.user.is_authenticated:
+        # Rediriger selon le rôle
+        if request.user.is_superuser:
+            return redirect('/admin/')
+        elif request.user.role == 'Rtable':
+            return redirect('menu:menu_list')
+        elif request.user.role in ['Rservent', 'Radmin']:
+            return redirect('tables:serveur_dashboard')
+        elif request.user.role == 'Rcuisinier':
+            return redirect('menu:tableau_bord_cuisinier')
+        elif request.user.role == 'Rcomptable':
+            return redirect('menu:tableau_bord_comptable')
+        else:
+            return redirect('menu:menu_list')
+    
+    if request.method == 'POST':
+        login_user = request.POST.get('username')  # Le template envoie 'username'
+        password = request.POST.get('password')
+        
+        # Validation
+        if not login_user or not password:
+            messages.error(request, "Veuillez remplir tous les champs.")
+            return render(request, 'accounts/login.html')
+        
+        # Authentification avec le champ 'login'
+        user = authenticate(request, username=login_user, password=password)
+        
+        if user is not None:
+            if user.actif:
+                login(request, user)
+                messages.success(request, f"Bienvenue {user.login} !")
+                
+                # Redirection selon le rôle
+                if user.is_superuser:
+                    return redirect('/admin/')
+                elif user.role == 'Rtable':
+                    return redirect('menu:menu_list')
+                elif user.role in ['Rservent', 'Radmin']:
+                    return redirect('tables:serveur_dashboard')
+                elif user.role == 'Rcuisinier':
+                    return redirect('menu:tableau_bord_cuisinier')
+                elif user.role == 'Rcomptable':
+                    return redirect('menu:tableau_bord_comptable')
+                else:
+                    return redirect('menu:menu_list')
+            else:
+                messages.error(request, "Votre compte est désactivé.")
+        else:
+            messages.error(request, "Identifiant ou mot de passe incorrect.")
+    
+    return render(request, 'accounts/login.html')
+
+
 def register(request):
-    """Vue d'inscription (optionnelle)"""
+    """Vue d'inscription"""
     if request.method == 'POST':
         login_user = request.POST.get('login')
         password = request.POST.get('password')

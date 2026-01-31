@@ -1,0 +1,260 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Table {{ user.table_restaurant.numero_table }} - RestauPro{% endblock %}
+
+{% block extra_css %}
+<style>
+.table-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.card-hover {
+    transition: all 0.3s ease;
+}
+.card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+.status-badge {
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+.menu-item {
+    transition: all 0.3s ease;
+}
+.menu-item:hover {
+    transform: scale(1.02);
+}
+.cart-icon {
+    animation: bounce 2s infinite;
+}
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    60% { transform: translateY(-5px); }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- En-tête de la table -->
+    <div class="table-header text-white p-6 rounded-b-3xl shadow-2xl">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-4xl font-bold mb-2">🍽️ Table {{ user.table_restaurant.numero_table }}</h1>
+                    <p class="text-xl opacity-90">{{ user.table_restaurant.nombre_places }} places • {{ user.table_restaurant.get_etat_display }}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-lg opacity-90">Bienvenue</p>
+                    <p class="text-2xl font-bold">{{ user.login }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto p-6 space-y-6">
+        <!-- Actions rapides -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-indigo-100 p-3 rounded-lg">
+                        <span class="text-2xl">🛒</span>
+                    </div>
+                    <a href="{% url 'menu:panier' %}" class="cart-icon">
+                        <span class="bg-indigo-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+                            {% if panier_count > 0 %}{{ panier_count }}{% else %}0{% endif %}
+                        </span>
+                    </a>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Mon Panier</h3>
+                <p class="text-gray-600 mb-4">Voir et modifier ma commande</p>
+                <a href="{% url 'menu:panier' %}" class="block w-full bg-indigo-600 hover:bg-indigo-700 text-white text-center py-2 rounded-lg font-medium transition">
+                    Voir le panier
+                </a>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-green-100 p-3 rounded-lg">
+                        <span class="text-2xl">📋</span>
+                    </div>
+                    {% if user.table_restaurant.etat == 'attente' %}
+                        <span class="status-badge bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-bold">En cours</span>
+                    {% elif user.table_restaurant.etat == 'servie' %}
+                        <span class="status-badge bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-bold">Prête</span>
+                    {% endif %}
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Mes Commandes</h3>
+                <p class="text-gray-600 mb-4">Historique de mes commandes</p>
+                <a href="{% url 'menu:mes_commandes' %}" class="block w-full bg-green-600 hover:bg-green-700 text-white text-center py-2 rounded-lg font-medium transition">
+                    Voir l'historique
+                </a>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-purple-100 p-3 rounded-lg">
+                        <span class="text-2xl">👤</span>
+                    </div>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Mon Compte</h3>
+                <p class="text-gray-600 mb-4">Gérer mes informations</p>
+                <button class="block w-full bg-purple-600 hover:bg-purple-700 text-white text-center py-2 rounded-lg font-medium transition">
+                    Mon profil
+                </button>
+            </div>
+        </div>
+
+        <!-- Menu du restaurant -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">🍽️ Menu du Restaurant</h2>
+                <div class="flex items-center space-x-2">
+                    <input type="text" placeholder="Rechercher un plat..." 
+                           class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                           id="searchInput">
+                    <button onclick="searchPlats()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg">
+                        🔍
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filtres de catégories -->
+            <div class="flex space-x-2 overflow-x-auto pb-4 mb-6">
+                <button onclick="filterCategory('')" class="category-btn px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 whitespace-nowrap transition">
+                    Tous
+                </button>
+                {% for code, nom in categories %}
+                    <button onclick="filterCategory('{{ code }}')" class="category-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 whitespace-nowrap transition">
+                        {{ nom }}
+                    </button>
+                {% endfor %}
+            </div>
+
+            <!-- Liste des plats par catégorie -->
+            <div id="platsContainer" class="space-y-8">
+                {% for categorie, plats in plats_par_categorie.items %}
+                    <div class="categorie-section" data-categorie="{{ categorie }}">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                            <span class="mr-2">
+                                {% if 'Entrée' in categorie %}🥗{% elif 'Plat' in categorie %}🍖{% elif 'Dessert' in categorie %}🍰{% else %}🥤{% endif %}
+                            </span>
+                            {{ categorie }}
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            {% for plat in plats %}
+                                <div class="menu-item bg-gray-50 rounded-lg overflow-hidden hover:shadow-lg border border-gray-200">
+                                    {% if plat.image %}
+                                        <img src="{{ plat.image.url }}" alt="{{ plat.nom }}" class="w-full h-32 object-cover">
+                                    {% else %}
+                                        <div class="w-full h-32 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                                            <span class="text-4xl opacity-50">
+                                                {% if 'Entrée' in plat.categorie %}🥗{% elif 'Plat' in plat.categorie %}🍖{% elif 'Dessert' in plat.categorie %}🍰{% else %}🥤{% endif %}
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                    <div class="p-4">
+                                        <h4 class="font-bold text-gray-900 mb-1">{{ plat.nom }}</h4>
+                                        <p class="text-sm text-gray-600 mb-3">{{ plat.description|truncatewords:15 }}</p>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-lg font-bold text-indigo-600">{{ plat.prix }} GNF</span>
+                                            <form method="post" action="{% url 'menu:ajouter_au_panier' plat.id %}" class="inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="quantite" value="1">
+                                                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg text-sm font-medium transition">
+                                                    + Ajouter
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="text-center py-12">
+                        <span class="text-6xl mb-4 block">🍽️</span>
+                        <p class="text-gray-500 text-lg">Aucun plat disponible pour le moment.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- État actuel de la table -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-xl font-bold text-gray-900 mb-4">📊 État Actuel</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="text-center p-4 bg-gray-50 rounded-lg">
+                    <p class="text-sm text-gray-600 mb-1">Numéro de table</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ user.table_restaurant.numero_table }}</p>
+                </div>
+                <div class="text-center p-4 bg-gray-50 rounded-lg">
+                    <p class="text-sm text-gray-600 mb-1">Statut</p>
+                    <p class="text-2xl font-bold">
+                        <span class="{% if user.table_restaurant.etat == 'libre' %}text-green-600{% elif user.table_restaurant.etat == 'attente' %}text-yellow-600{% elif user.table_restaurant.etat == 'servie' %}text-blue-600{% else %}text-gray-600{% endif %}">
+                            {{ user.table_restaurant.get_etat_display }}
+                        </span>
+                    </p>
+                </div>
+                <div class="text-center p-4 bg-gray-50 rounded-lg">
+                    <p class="text-sm text-gray-600 mb-1">Articles au panier</p>
+                    <p class="text-2xl font-bold text-indigo-600">{{ panier_count }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function filterCategory(categorie) {
+    const sections = document.querySelectorAll('.categorie-section');
+    const buttons = document.querySelectorAll('.category-btn');
+    
+    // Réinitialiser les boutons
+    buttons.forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'text-white');
+        btn.classList.add('bg-gray-200', 'text-gray-700');
+    });
+    
+    // Activer le bouton sélectionné
+    event.target.classList.remove('bg-gray-200', 'text-gray-700');
+    event.target.classList.add('bg-indigo-600', 'text-white');
+    
+    // Filtrer les sections
+    if (categorie === '') {
+        sections.forEach(section => section.style.display = 'block');
+    } else {
+        sections.forEach(section => {
+            if (section.dataset.categorie.includes(categorie.replace('ENTREE', 'Entrée').replace('PLAT', 'Plat principal').replace('DESSERT', 'Dessert').replace('BOISSON', 'Boisson'))) {
+                                section.style.display = 'block';
+                            } else {
+                                section.style.display = 'none';
+                            }
+                        });
+    }
+}
+
+function searchPlats() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const plats = document.querySelectorAll('.menu-item');
+    
+    plats.forEach(plat => {
+        const text = plat.textContent.toLowerCase();
+        if (text.includes(searchTerm)) {
+            plat.style.display = 'block';
+        } else {
+            plat.style.display = 'none';
+        }
+    });
+}
+
+// Recherche en temps réel
+document.getElementById('searchInput').addEventListener('input', searchPlats);
+</script>
+{% endblock %}

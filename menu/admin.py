@@ -116,7 +116,11 @@ class CaisseAdmin(admin.ModelAdmin):
     
     def has_add_permission(self, request):
         # Empêcher la création de plusieurs caisses
-        return not Caisse.objects.exists()
+        try:
+            return not Caisse.objects.exists()
+        except:
+            # Si la table n'existe pas, permettre la création
+            return True
     
     def has_delete_permission(self, request, obj=None):
         # Empêcher la suppression de la caisse

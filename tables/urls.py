@@ -4,6 +4,9 @@ from . import views
 app_name = 'tables'
 
 urlpatterns = [
+    # Dashboard serveur
+    path('serveur/', views.serveur_dashboard, name='serveur_dashboard'),
+    
     # Liste des tables (pour serveurs/admin)
     path('', views.liste_tables, name='liste_tables'),
     

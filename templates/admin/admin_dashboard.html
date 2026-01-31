@@ -1,0 +1,306 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Administration - RestauPro{% endblock %}
+
+{% block extra_css %}
+<style>
+.admin-header {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+}
+.card-hover {
+    transition: all 0.3s ease;
+}
+.card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+.admin-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+.quick-stat {
+    transition: all 0.3s ease;
+}
+.quick-stat:hover {
+    transform: scale(1.05);
+}
+.system-status {
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+.admin-action {
+    transition: all 0.2s ease;
+}
+.admin-action:hover {
+    transform: scale(1.02);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- En-tête administrateur -->
+    <div class="admin-header text-white p-6 rounded-b-3xl shadow-2xl">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-4xl font-bold mb-2">🔧 Panneau d'Administration</h1>
+                    <p class="text-xl opacity-90">Gestion complète du restaurant</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-lg opacity-90">Super Administrateur</p>
+                    <p class="text-2xl font-bold">{{ user.login }}</p>
+                    <a href="/admin/" class="inline-block mt-2 bg-white text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 transition">
+                        ⚙️ Django Admin
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto p-6 space-y-6">
+        <!-- Statistiques globales -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="admin-card rounded-xl shadow-lg p-6 text-white">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-3xl">👥</span>
+                    <span class="text-2xl font-bold">{{ total_users }}</span>
+                </div>
+                <h3 class="text-lg font-bold mb-1">Utilisateurs</h3>
+                <p class="text-white opacity-90 text-sm">Total des comptes</p>
+            </div>
+
+            <div class="bg-green-500 text-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-3xl">🪑</span>
+                    <span class="text-2xl font-bold">{{ total_tables }}</span>
+                </div>
+                <h3 class="text-lg font-bold mb-1">Tables</h3>
+                <p class="text-white opacity-90 text-sm">Total des tables</p>
+            </div>
+
+            <div class="bg-orange-500 text-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-3xl">🍽️</span>
+                    <span class="text-2xl font-bold">{{ total_plats }}</span>
+                </div>
+                <h3 class="text-lg font-bold mb-1">Plats</h3>
+                <p class="text-white opacity-90 text-sm">Au menu</p>
+            </div>
+
+            <div class="bg-purple-500 text-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-3xl">💰</span>
+                    <span class="text-2xl font-bold">{{ caisse_solde }} GNF</span>
+                </div>
+                <h3 class="text-lg font-bold mb-1">Caisse</h3>
+                <p class="text-white opacity-90 text-sm">Solde actuel</p>
+            </div>
+        </div>
+
+        <!-- Actions rapides d'administration -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="bg-white rounded-xl shadow-lg p-6 card-hover admin-action">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-blue-100 p-3 rounded-lg">
+                        <span class="text-2xl">👥</span>
+                    </div>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Gestion Utilisateurs</h3>
+                <p class="text-gray-600 mb-4">Créer et gérer les comptes</p>
+                <a href="/admin/accounts/user/" class="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center py-2 rounded-lg font-medium transition">
+                    👥 Gérer les users
+                </a>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 card-hover admin-action">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-green-100 p-3 rounded-lg">
+                        <span class="text-2xl">🪑</span>
+                    </div>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Gestion Tables</h3>
+                <p class="text-gray-600 mb-4">Configurer les tables</p>
+                <a href="/admin/tables/tablerestaurant/" class="block w-full bg-green-600 hover:bg-green-700 text-white text-center py-2 rounded-lg font-medium transition">
+                    🪑 Gérer les tables
+                </a>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 card-hover admin-action">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-orange-100 p-3 rounded-lg">
+                        <span class="text-2xl">🍽️</span>
+                    </div>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Gestion Menu</h3>
+                <p class="text-gray-600 mb-4">Plats et catégories</p>
+                <a href="/admin/menu/plat/" class="block w-full bg-orange-600 hover:bg-orange-700 text-white text-center py-2 rounded-lg font-medium transition">
+                    🍽️ Gérer le menu
+                </a>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 card-hover admin-action">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="bg-purple-100 p-3 rounded-lg">
+                        <span class="text-2xl">📊</span>
+                    </div>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Rapports</h3>
+                <p class="text-gray-600 mb-4">Statistiques et exports</p>
+                <a href="{% url 'menu:rapport_financier' %}" class="block w-full bg-purple-600 hover:bg-purple-700 text-white text-center py-2 rounded-lg font-medium transition">
+                    📊 Voir les rapports
+                </a>
+            </div>
+        </div>
+
+        <!-- État du système -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">🖥️ État du Système</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                        <span class="font-medium text-gray-900">Base de données</span>
+                        <span class="system-status bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold">✅ Opérationnelle</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                        <span class="font-medium text-gray-900">Serveur Web</span>
+                        <span class="system-status bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold">✅ En ligne</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                        <span class="font-medium text-gray-900">Services</span>
+                        <span class="system-status bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold">✅ Actifs</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                        <span class="font-medium text-gray-900">Dernière sauvegarde</span>
+                        <span class="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-bold">📅 Aujourd'hui</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">📈 Activité Récente</h3>
+                <div class="space-y-3">
+                    <div class="border-l-4 border-blue-500 bg-blue-50 p-3 rounded-lg">
+                        <p class="text-sm text-gray-600">Il y a 5 minutes</p>
+                        <p class="font-medium text-gray-900">Nouvelle commande #{{ last_commande_id }}</p>
+                    </div>
+                    <div class="border-l-4 border-green-500 bg-green-50 p-3 rounded-lg">
+                        <p class="text-sm text-gray-600">Il y a 15 minutes</p>
+                        <p class="font-medium text-gray-900">Paiement validé</p>
+                    </div>
+                    <div class="border-l-4 border-purple-500 bg-purple-50 p-3 rounded-lg">
+                        <p class="text-sm text-gray-600">Il y a 1 heure</p>
+                        <p class="font-medium text-gray-900">Nouvel utilisateur inscrit</p>
+                    </div>
+                    <div class="border-l-4 border-orange-500 bg-orange-50 p-3 rounded-lg">
+                        <p class="text-sm text-gray-600">Il y a 2 heures</p>
+                        <p class="font-medium text-gray-900">Menu mis à jour</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Accès rapides par rôle -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-xl font-bold text-gray-900 mb-4">🎭 Accès par Rôle</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <a href="{% url 'menu:table_dashboard' %}" class="block p-4 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-2xl">🍽️</span>
+                        <div>
+                            <p class="font-bold text-gray-900">Espace Table</p>
+                            <p class="text-sm text-gray-600">Interface client</p>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="{% url 'tables:serveur_dashboard' %}" class="block p-4 bg-pink-50 rounded-lg hover:bg-pink-100 transition">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-2xl">👨‍🍳</span>
+                        <div>
+                            <p class="font-bold text-gray-900">Espace Serveur</p>
+                            <p class="text-sm text-gray-600">Gestion des tables</p>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="{% url 'menu:tableau_bord_cuisinier' %}" class="block p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-2xl">👨‍🍳</span>
+                        <div>
+                            <p class="font-bold text-gray-900">Espace Cuisinier</p>
+                            <p class="text-sm text-gray-600">Gestion des plats</p>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="{% url 'menu:tableau_bord_comptable' %}" class="block p-4 bg-green-50 rounded-lg hover:bg-green-100 transition">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-2xl">💰</span>
+                        <div>
+                            <p class="font-bold text-gray-900">Espace Comptable</p>
+                            <p class="text-sm text-gray-600">Finances et rapports</p>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="{% url 'tables:liste_tables' %}" class="block p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-2xl">📋</span>
+                        <div>
+                            <p class="font-bold text-gray-900">Liste Tables</p>
+                            <p class="text-sm text-gray-600">Vue d'ensemble</p>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="{% url 'menu:menu_list' %}" class="block p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-2xl">📖</span>
+                        <div>
+                            <p class="font-bold text-gray-900">Menu Restaurant</p>
+                            <p class="text-sm text-gray-600">Carte du restaurant</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Outils système -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-xl font-bold text-gray-900 mb-4">🔧 Outils Système</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <button class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                    <span class="text-2xl block mb-2">🔄</span>
+                    <p class="font-medium text-gray-900">Redémarrer services</p>
+                </button>
+                <button class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                    <span class="text-2xl block mb-2">💾</span>
+                    <p class="font-medium text-gray-900">Sauvegarder DB</p>
+                </button>
+                <button class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                    <span class="text-2xl block mb-2">📊</span>
+                    <p class="font-medium text-gray-900">Exporter données</p>
+                </button>
+                <button class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                    <span class="text-2xl block mb-2">🧹</span>
+                    <p class="font-medium text-gray-900">Nettoyer cache</p>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-rafraîchissement des statistiques
+setInterval(() => {
+    console.log('Actualisation des stats admin...');
+    // Ajouter ici l'appel AJAX pour rafraîchir les stats
+}, 60000); // Toutes les minutes
+</script>
+{% endblock %}

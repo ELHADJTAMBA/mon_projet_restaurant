@@ -52,9 +52,12 @@
                             <span class="font-medium">{{ user.login }}</span>
                             <span class="text-sm text-gray-500">({{ user.get_role_display }})</span>
                         </span>
-                        <a href="{% url 'accounts:logout' %}" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium">
-                            Déconnexion
-                        </a>
+                        <form method="post" action="{% url 'accounts:logout' %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                                Déconnexion
+                            </button>
+                        </form>
                     {% else %}
                         <a href="{% url 'accounts:login' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
                             Connexion

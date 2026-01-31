@@ -10,6 +10,35 @@ from accounts.decorators import serveur_only
 
 @login_required
 @serveur_only
+def serveur_dashboard(request):
+    """Dashboard professionnel pour le rôle serveur"""
+    tables = TableRestaurant.objects.select_related('utilisateur').all()
+    
+    # Statistiques détaillées
+    stats = {
+        'total': tables.count(),
+        'libres': tables.filter(etat='libre').count(),
+        'attente': tables.filter(etat='attente').count(),
+        'servies': tables.filter(etat='servie').count(),
+        'payees': tables.filter(etat='payee').count(),
+    }
+    
+    # Tables nécessitant une attention
+    tables_en_attente = tables.filter(etat='attente')
+    tables_a_payer = tables.filter(etat='servie')
+    
+    context = {
+        'tables': tables,
+        'stats': stats,
+        'tables_en_attente': tables_en_attente,
+        'tables_a_payer': tables_a_payer,
+    }
+    
+    return render(request, 'tables/serveur_dashboard.html', context)
+
+
+@login_required
+@serveur_only
 def liste_tables(request):
     """Liste de toutes les tables du restaurant"""
     tables = TableRestaurant.objects.select_related('utilisateur').all()

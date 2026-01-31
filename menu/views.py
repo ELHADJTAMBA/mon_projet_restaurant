@@ -26,8 +26,12 @@ from io import BytesIO
 # from accounts.decorators import comptable_only
 
 @login_required
-def menu_list(request):
-    """Liste des plats disponibles"""
+def table_dashboard(request):
+    """Dashboard pour le rôle table avec toutes les fonctionnalités"""
+    if request.user.role != 'Rtable':
+        messages.error(request, "Accès non autorisé.")
+        return redirect('menu:menu_list')
+    
     categorie = request.GET.get('categorie', '')
     recherche = request.GET.get('q', '')
     
@@ -51,6 +55,51 @@ def menu_list(request):
     # Récupérer le panier actif pour l'utilisateur table
     panier = None
     panier_count = 0
+    try:
+        table = request.user.table_restaurant
+        panier = Panier.objects.filter(table=table, actif=True).first()
+        if panier:
+            panier_count = panier.items.count()
+    except:
+        pass
+    
+    context = {
+        'plats_par_categorie': plats_par_categorie,
+        'categories': Plat.CATEGORIES,
+        'panier_count': panier_count,
+    }
+    
+    return render(request, 'menu/table_dashboard.html', context)
+
+
+@login_required
+def menu_list(request):
+    """Liste des plats disponibles"""
+    categorie = request.GET.get('categorie', '')
+    recherche = request.GET.get('q', '')
+    
+    plats = Plat.objects.filter(disponible=True)
+    
+    if categorie:
+        plats = plats.filter(categorie=categorie)
+    
+    if recherche:
+        plats = plats.filter(
+            Q(nom__icontains=recherche) | Q(description__icontains=recherche)
+        )
+    
+    # Regrouper par catégorie
+    plats_par_categorie = {}
+    plats_disponibles_count = 0
+    for categorie_code, categorie_nom in Plat.CATEGORIES:
+        plats_categorie = plats.filter(categorie=categorie_code)
+        if plats_categorie.exists():
+            plats_par_categorie[categorie_nom] = plats_categorie
+            plats_disponibles_count += plats_categorie.filter(disponible=True).count()
+    
+    # Récupérer le panier actif pour l'utilisateur table
+    panier = None
+    panier_count = 0
     if request.user.role == 'Rtable':
         try:
             table = request.user.table_restaurant
@@ -64,6 +113,8 @@ def menu_list(request):
         'plats_par_categorie': plats_par_categorie,
         'categories': Plat.CATEGORIES,
         'panier_count': panier_count,
+        'plats': plats,
+        'plats_disponibles_count': plats_disponibles_count,
     }
     
     return render(request, 'menu/menu_list.html', context)
